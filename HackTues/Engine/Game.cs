@@ -1,32 +1,35 @@
 ﻿using HackTues.Controls;
 using OpenTK.Mathematics;
 using System;
+using System.IO;
 
 namespace HackTues.Engine;
 
-public interface IProjectileShooter {
-    void Shoot(Projectile projectile);
+public interface ILevelLoader {
+    void LoadMap(string name);
+}
+public interface ILobbyLoader {
+    void LoadLobby();
 }
 
-public abstract class Projectile: ILayerOwner {
-    public abstract Layer Layer { get; }
-    public float Direction { get; }
-    public float Speed { get; }
-    public Vector3 Position { get; }
+public abstract class Game: IGame {
+    public static string AssetsPath {
+        get {
+            if (File.Exists(".assets")) {
+                var r = new StreamReader(".assets");
+                var path = r.ReadToEnd().Trim();
+                r.Close();
+                if (path != "") return Path.GetFullPath(path);
+            }
 
-    protected abstract void OnCollide(SideViewPlayer player);
+            var w = new StreamWriter(".assets");
+            w.WriteLine("assets");
+            w.Close();
 
-    public void Update(float delta, ICollider environment, SideViewPlayer player) {
-
+            return Path.GetFullPath("assets");
+        }
     }
-    public void AddLayers(SortedSet<Layer> layers) {
-        layers.Add(Layer);
-    }
-}
-
-public abstract class AbstractGame: IGame {
-    public Map Map { get; private set; } = new();
-    public List<Projectile> Projectiles { get; } = new();
+    public Map Map { get; protected set; } = new();
     protected abstract Vector2 Friction { get; }
     public abstract Vector2 CameraPos { get; }
     public abstract Layer PlayerLayer { get; }
@@ -44,15 +47,8 @@ public abstract class AbstractGame: IGame {
     protected virtual void HitY() {  }
 
     public void AddLayers(SortedSet<Layer> layers) {
+        Map.AddLayers(layers);
         layers.Add(PlayerLayer + PlayerPosition);
-    }
-
-    public void LoadMap(string name) {
-        Projectiles.Clear();
-        var f = new FileStream(Path.Join(Game.AssetsPath(Environment.CurrentDirectory), "maps/" + name), FileMode.Open);
-        Map = Map.Load(f);
-        Player!.Position = Map.Spawn;
-        f.Close();
     }
 
     public void Render() {
@@ -86,11 +82,12 @@ public abstract class AbstractGame: IGame {
     }
 }
 
-public class LobbyGame: AbstractGame {
-    public override Vector2 CameraPos => PlayerPosition;
+public class LobbyGame: Game {
+    protected override Vector2 Friction { get; } = new(0.000001f, 0.000001f);
     public override Layer PlayerLayer { get; } = new("player", new(0, 0), new(32, 64), new(16, 64));
     public override Hitbox PlayerHitbox { get; } = new(new(-16, -8), new(32, 8));
-    protected override Vector2 Friction { get; } = new(0.000001f, 0.000001f);
+    public override Vector2 CameraPos => PlayerPosition;
+    public ILevelLoader LevelLoader { get; }
 
     protected override Vector2 GetAcceleration(float detla, IController? controller) {
         var acc = Vector2.Zero;
@@ -123,17 +120,28 @@ public class LobbyGame: AbstractGame {
         if (controller?.Poll(Button.Shoot) == true) {
             foreach (var entry in Map.EntryLayers) {
                 if ((pos - entry.Position).Length < 16) {
-                    LoadMap(entry.Texture[6..]);
+                    LevelLoader.LoadMap(entry.Texture[6..]);
                 }
             }
         }
     }
+
+    public LobbyGame(ILevelLoader lobbyLoader) {
+        LevelLoader = lobbyLoader;
+        Map = Map.Load(new FileStream(Path.Combine(AssetsPath, "maps/spawn"), FileMode.Open));
+        PlayerPosition = Map.Spawn;
+    }
 }
-public class LevelGame: AbstractGame {
-    public override Vector2 CameraPos => PlayerPosition;
+public class LevelGame: Game {
+    protected override Vector2 Friction { get; } = new(0.000001f, 0.1f);
+    public override Vector2 CameraPos => new(Math.Max(1440 / 4, pos.X), 900 / 4);
     public override Layer PlayerLayer { get; } = new("player", new(0, 0), new(32, 64), new(16, 64));
     public override Hitbox PlayerHitbox { get; } = new(new(-16, -64), new(32, 64));
-    protected override Vector2 Friction { get; } = new(0.000001f, 0.1f);
+    public ILevelLoader LevelLoader { get; }
+
+    public void LoadMap(string name) {
+        Map = Map.Load(new FileStream(Path.Combine(AssetsPath, "maps/" + name), FileMode.Open));
+    }
 
     private float kyoteeTime = 0;
     private float jumpCooldown = 0;
@@ -168,74 +176,8 @@ public class LevelGame: AbstractGame {
         jumpCooldown -= delta;
         kyoteeTime -= delta;
     }
-}
 
-public class Game: IProjectileShooter {
-    public static string AssetsPath(string root) {
-        if (File.Exists(Path.Join(root, ".assets"))) {
-            var r = new StreamReader(".assets");
-            var path = r.ReadToEnd();
-            path = Path.GetFullPath(path);
-            r.Close();
-            if (path != null)
-                return path;
-        }
-
-        var w = new StreamWriter(".assets");
-        w.Write("assets");
-        w.Close();
-        return Path.GetFullPath("assets");
-    }
-
-    public IGame Player { get; set; }
-    public SideViewPlayer SidePlayer { get; set; }
-    public TopViewPlayer TopPlayer { get; set; }
-    public Map Map { get; set; } = new();
-    public List<Projectile> Projectiles { get; } = new();
-
-    public void Shoot(Projectile projectile) {
-        this.Projectiles.Add(projectile);
-    }
-
-    public void Render() {
-        var set = new SortedSet<Layer>();
-        Map.AddLayers(set);
-        Player?.AddLayers(set);
-
-        foreach (var fg in set) {
-            fg.Render();
-        }
-    }
-
-    public void LoadMap(string name) {
-        Projectiles.Clear();
-        var f = new FileStream(Path.Join(AssetsPath(Environment.CurrentDirectory), "maps/" + name), FileMode.Open);
-        Map = Map.Load(f);
-        if (name == "spawn") {
-            Player = TopPlayer;
-        }
-        else {
-            Player = SidePlayer;
-        }
-        Player!.Position = Map.Spawn;
-        f.Close();
-    }
-
-    public void Update(IController? controller, float delta) {
-        Player.Update(delta, Map, controller, this);
-
-        if (controller?.Poll(Button.Shoot) == true) {
-            foreach (var entry in Map.EntryLayers) {
-                if ((Player.Position - entry.Position).Length < 16) {
-                    LoadMap(entry.Texture[6..]);
-                }
-            }
-        }
-    }
-
-    public Game(SideViewPlayer sidePlayer, TopViewPlayer topPlayer) {
-        SidePlayer = sidePlayer;
-        TopPlayer = topPlayer;
-        LoadMap("spawn");
+    public LevelGame(ILevelLoader levelLoader) {
+        LevelLoader = levelLoader;
     }
 }

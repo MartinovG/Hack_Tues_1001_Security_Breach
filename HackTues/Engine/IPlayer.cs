@@ -10,6 +10,5 @@ public interface IGame: ILayerOwner {
     public Map Map { get; }
     public bool Switch { get; }
 
-    public void LoadMap(string name);
     public void Update(float delta, IController? controller);
 }

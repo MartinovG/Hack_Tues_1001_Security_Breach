@@ -10,7 +10,7 @@ using System;
 
 namespace HackTues.App;
 
-public class Program: GameWindow {
+public class Program: GameWindow, ILevelLoader, ILobbyLoader {
     public static Vector2 Round(Vector2 vec) {
         return new(
             MathF.Floor(vec.X),
@@ -19,10 +19,9 @@ public class Program: GameWindow {
     }
 
     private ComputerController controller = new();
-    private Game game = new(
-        new("player"),
-        new("player")
-    );
+    private LevelGame levelGame;
+    private LobbyGame lobbyGame;
+    private IGame currGame;
     private IAtlas atlas;
     private GLRenderer gl;
     private GLMesh<SolidVertex> hitbox;
@@ -45,30 +44,48 @@ public class Program: GameWindow {
     protected override void OnUpdateFrame(FrameEventArgs args) {
         var delta = (float)args.Time;
         controller.Update(MousePosition, delta);
-        game.Update(controller, delta);
+        currGame.Update(delta, controller);
         base.OnUpdateFrame(args);
     }
     protected override void OnRenderFrame(FrameEventArgs args) {
         gl.NewFrame(Size);
         var view =
-            Matrix4.CreateTranslation(new(Round(new Vector2(1440, 900) / 4) - Round(game.Player!.CameraPos))) *
+            Matrix4.CreateTranslation(new(Round(new Vector2(1440, 900) / 4) - Round(currGame.CameraPos))) *
             Matrix4.CreateOrthographicOffCenter(0, 1440 / 2, 900 / 2, 0, -1, 1);
         gl.SolidTexShader.ViewMatrix = view;
         gl.SolidShader.ViewMatrix = view;
 
-        game.Render();
+        var layers = new SortedSet<Layer>();
+        currGame.AddLayers(layers);
+
+        foreach (var layer in layers) {
+            layer.Render();
+        }
 
         base.OnRenderFrame(args);
         SwapBuffers();
     }
 
+    public void LoadMap(string name) {
+        currGame = levelGame;
+        levelGame.LoadMap(name);
+    }
+    public void LoadLobby() {
+        currGame = lobbyGame;
+    }
+
     public Program() : base(new(), new()) {
         Size = new(1440, 900);
 
+        lobbyGame = new(this);
+        levelGame = new(this);
+
         gl = new();
         hitbox = gl.Mesh(gl.SolidShader);
+        currGame = lobbyGame;
 
-        atlas = new GameAtlas(new Atlas(2048, Path.Join(Game.AssetsPath(Environment.CurrentDirectory), "textures"), gl), 0);
+
+        atlas = new GameAtlas(new Atlas(2048, Path.Join(Game.AssetsPath, "textures"), gl), 0);
         gl.SolidTexShader.Atlas = atlas;
 
         gl.BackfaceCulling = false;
