@@ -10,7 +10,7 @@ public class Layer: IComparable<Layer> {
     public static GLSolidTexShader? shader { get; private set; }
 
     public Vector2 Position { get; set; }
-    public float YOffset { get; set; }
+    public Vector2 Origin { get; set; }
     public Vector2 Size { get; }
     public string Texture { get; }
 
@@ -22,21 +22,21 @@ public class Layer: IComparable<Layer> {
 
         shader.TransformMatrix =
             Matrix4.CreateScale(Size.X, Size.Y, 1) *
-            Matrix4.CreateTranslation(new(pos));
+            Matrix4.CreateTranslation(new(pos - Origin));
         shader.Texture = Texture;
         mesh.Draw(Primitive.Triangles);
     }
 
     public int CompareTo(Layer? other) {
         if (other is null) throw new ArgumentNullException(nameof(other));
-            return (this.Position.Y + this.YOffset).CompareTo(other.Position.Y + other.YOffset);
+            return (this.Position.Y).CompareTo(other.Position.Y);
     }
 
-    public Layer(string texture, Vector2 pos, Vector2 size, float yOffset = 0) {
+    public Layer(string texture, Vector2 pos, Vector2 size, Vector2? origin = null) {
         this.Texture = texture;
         this.Size = size;
         this.Position = pos;
-        this.YOffset = yOffset;
+        this.Origin = origin ?? Vector2.Zero;
     }
 
     public static bool operator ==(Layer left, Layer right) => left.Equals(right);
@@ -47,8 +47,8 @@ public class Layer: IComparable<Layer> {
     public static bool operator >(Layer left, Layer right) => left.CompareTo(right) > 0;
     public static bool operator >=(Layer left, Layer right) => left.CompareTo(right) >= 0;
 
-    public static Layer operator +(Layer left, Vector2 right) => new(left.Texture, left.Position + right, left.Size, left.YOffset);
-    public static Layer operator -(Layer left, Vector2 right) => new(left.Texture, left.Position - right, left.Size, left.YOffset);
+    public static Layer operator +(Layer left, Vector2 right) => new(left.Texture, left.Position + right, left.Size, left.Origin);
+    public static Layer operator -(Layer left, Vector2 right) => new(left.Texture, left.Position - right, left.Size, left.Origin);
 
     public static void Init(GLRenderer r) {
         if (mesh != null)

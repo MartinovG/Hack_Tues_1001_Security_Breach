@@ -21,14 +21,12 @@ public class ComputerController: IController {
     public void Update(Keys key, bool down) {
         var btn = key switch {
             Keys.W => Button.Up,
-            Keys.Space => Button.Up,
-            Keys.Up => Button.Up,
             Keys.S => Button.Down,
-            Keys.Down => Button.Down,
             Keys.A => Button.Left,
-            Keys.Left => Button.Left,
             Keys.D => Button.Right,
-            Keys.Right => Button.Right,
+            Keys.X => Button.Shoot,
+            Keys.Space => Button.Select,
+            Keys.Enter => Button.Play,
             _ => (Button)(-1),
         };
 

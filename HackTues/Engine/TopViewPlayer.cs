@@ -1,11 +1,11 @@
-﻿using HackTues.Controls;
+﻿ using HackTues.Controls;
 using OpenTK.Mathematics;
 
 namespace HackTues.Engine;
 
 public class TopViewPlayer: Player {
     protected override Vector2 Friction { get; } = new(0.000001f, 0.000001f);
-    public override Vector2 CameraPos => pos + Layer.Size / 2;
+    public override Vector2 CameraPos => pos - new Vector2(0, 1);
 
     protected override Vector2 GetAcceleration(float delta, IController? controller) {
         var acc = Vector2.Zero;
@@ -33,6 +33,6 @@ public class TopViewPlayer: Player {
     }
 
     public TopViewPlayer(Layer layer) : base(layer) {
-        Hitbox = new(new(0, 1.9f), new(1, .1f));
+        Hitbox = new(new(-.5f, -.125f), new(1, .25f));
     }
 }

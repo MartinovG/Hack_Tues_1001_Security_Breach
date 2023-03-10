@@ -6,8 +6,7 @@ namespace HackTues.OpenGL;
 
 public record struct TextureLocation(int PageIndex, Hitbox Hitbox);
 
-public class Atlas
-{
+public class Atlas: IAtlas {
     private List<AtlasPage> pages = new();
     public int Size { get; }
     public GLTextureArray? Texture { get; private set; }
@@ -26,12 +25,7 @@ public class Atlas
         }
     }
 
-    public void LoadToGL(GLRenderer renderer)
-    {
-        Texture = renderer.TextureArray(pages.Select(v => v.Bitmap).ToArray());
-    }
-
-    public Atlas(int size, IEnumerable<KeyValuePair<string, SKBitmap>> resources)
+    public Atlas(int size, IEnumerable<KeyValuePair<string, SKBitmap>> resources, GLRenderer gl)
     {
         Size = size = 1 << (int)Math.Ceiling(Math.Log2(size));
         pages.Add(new(size));
@@ -66,15 +60,22 @@ public class Atlas
                 }
             }
         }
+
+        Texture = gl.TextureArray(pages.Select(v => v.Bitmap).ToArray());
+        Texture.Interpolation = Interpolation.Nearest;
     }
 
-    public Atlas(int size, string path) : this(size, Directory
+    public void Use(int slot) {
+        this.Texture.Bind(slot);
+    }
+
+    public Atlas(int size, string path, GLRenderer gl) : this(size, Directory
         .GetFiles(path, "*", SearchOption.AllDirectories)
         .Where(v => v.EndsWith(".png"))
         .Select(v => {
             var name = v[(path.Length + 1)..^4];
             var bmp = SKBitmap.Decode(new FileStream(v, FileMode.Open));
             return new KeyValuePair<string, SKBitmap>(name, bmp);
-        })
+        }), gl
     ) { }
 }

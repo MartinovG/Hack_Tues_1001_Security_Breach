@@ -5,6 +5,7 @@ namespace HackTues.Engine;
 
 public class Map: ICollider, ILayerOwner {
     public SortedSet<Layer> Layers { get; } = new();
+    public IEnumerable<Layer> EntryLayers => Layers.Where(v => v.Texture.StartsWith("entry-"));
     public List<Hitbox> Colliders { get; } = new();
     public Vector2 Spawn { get; set; }
     
@@ -33,7 +34,8 @@ public class Map: ICollider, ILayerOwner {
         w.Write((int)MathF.Floor(layer.Position.Y * 16));
         w.Write((int)MathF.Floor(layer.Size.X * 16));
         w.Write((int)MathF.Floor(layer.Size.Y * 16));
-        w.Write((int)MathF.Floor(layer.YOffset * 16));
+        w.Write((int)MathF.Floor(layer.Origin.X * 16));
+        w.Write((int)MathF.Floor(layer.Origin.Y * 16));
         w.Write(layer.Texture);
     }
     private static Layer LoadLayer(BinaryReader r) {
@@ -45,10 +47,13 @@ public class Map: ICollider, ILayerOwner {
             r.ReadInt32() / 16f,
             r.ReadInt32() / 16f
         );
-        var yOffst = r.ReadInt32() / 16f;
+        var origin = new Vector2(
+            r.ReadInt32() / 16f,
+            r.ReadInt32() / 16f
+        );
         var texture = r.ReadString();
 
-        return new(texture, pos, size, yOffst);
+        return new(texture, pos, size, origin);
     }
 
     public static void Save(Map map, Stream stream) {

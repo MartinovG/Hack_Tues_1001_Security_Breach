@@ -8,6 +8,25 @@ using OpenTK.Windowing.GraphicsLibraryFramework;
 
 namespace HackTues.Editor;
 
+public class EditorAtlas: IAtlas {
+    public IAtlas Atlas { get; }
+    public int Size => Atlas.Size;
+    public TextureLocation this[string name] {
+        get {
+            if (name.StartsWith("entry-")) return Atlas["monitor-off"];
+            return Atlas[name];
+        }
+    }
+
+    public void Use(int slot) {
+        Atlas.Use(slot);
+    }
+    
+    public EditorAtlas(IAtlas atlas) {
+        this.Atlas = atlas;    
+    }
+}
+
 public class Program: GameWindow {
     public static Vector2 Round(Vector2 vec) {
         return new(
@@ -41,7 +60,7 @@ public class Program: GameWindow {
     private List<ModifiableHitbox> colliders = new();
     private List<Layer> layers = new();
     private Vector2 spawn;
-    private Atlas atlas = new(2048, Path.Join(GetAssetsPath(), "textures"));
+    private IAtlas atlas;
     private GLRenderer gl;
     private GLMesh<SolidVertex> hitbox;
     private float x, y, scale = 1, speed = 1;
@@ -54,7 +73,7 @@ public class Program: GameWindow {
         var candidates = new List<object>();
 
         foreach (var layer in layers) {
-            if (new Hitbox(layer.Position, layer.Size).CollidesWith(new Vector2(x, y))) {
+            if (new Hitbox(layer.Position - layer.Origin, layer.Size).CollidesWith(new Vector2(x, y))) {
                 candidates.Add(layer);
             }
         }
@@ -82,7 +101,7 @@ public class Program: GameWindow {
         SetAssetsPath(path);
         path = GetAssetsPath();
         Directory.CreateDirectory(path);
-        atlas = new Atlas(2048, Path.Join(path, "textures"));
+        atlas = new EditorAtlas(new Atlas(2048, Path.Join(path, "textures"), gl));
         gl.SolidTexShader.Atlas = atlas;
     }
     private void SaveMap() {
@@ -104,6 +123,7 @@ public class Program: GameWindow {
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             var f = new FileStream(path, FileMode.OpenOrCreate);
             Map.Save(map, f);
+            f.Close();
         }
         catch (Exception) {
             Console.WriteLine("Unable to open file.");
@@ -119,6 +139,7 @@ public class Program: GameWindow {
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             var f = new FileStream(path, FileMode.Open);
             var map = Map.Load(f);
+            f.Close();
 
             spawn = map.Spawn;
             layers = map.Layers.ToList();
@@ -190,12 +211,12 @@ public class Program: GameWindow {
     private void RenderLayerOutlines() {
         foreach (var el in layers) {
             if (selection == el) {
-                RenderOutline(new(el.Position, el.Size), new(1, 0, 1, 1), 1 / 32f);
-                RenderHorizontalLine(el.Position + new Vector2(0, el.YOffset), el.Size.X, new(1, 0, 1, 1), 1 / 32f);
+                RenderOutline(new(el.Position - el.Origin, el.Size), new(1, 0, 1, 1), 1 / 32f);
+                RenderHorizontalLine(el.Position, 1 / 16f, new(1, 0, 0, 1), 1 / 16f);
             }
             else {
-                RenderOutline(new(el.Position, el.Size), new(1, 0, 0, 1), 1 / 32f);
-                RenderHorizontalLine(el.Position + new Vector2(0, el.YOffset), el.Size.X, new(1, 0, 0, 1), 1 / 32f);
+                RenderOutline(new(el.Position - el.Origin, el.Size), new(1, 0, 0, 1), 1 / 32f);
+                RenderHorizontalLine(el.Position, 1 / 16f, new(1, 0, 0, 1), 1 / 16f);
             }
         }
     }
@@ -253,7 +274,7 @@ public class Program: GameWindow {
                     activatorKey = e.Key;
                 }
                 else if (e.Key == Keys.O) {
-                    action = new OffsetAction(y, layer);
+                    action = new OffsetAction(x, y, layer);
                     activatorKey = e.Key;
                 }
                 else if (e.Key == Keys.Delete) {
@@ -297,7 +318,7 @@ public class Program: GameWindow {
     }
     protected override void OnRenderFrame(FrameEventArgs args) {
         gl.NewFrame(Size);
-        var view = Matrix4.CreateTranslation(1440 / 128f / scale - x, 900 / 128f / scale -y, 0) * Matrix4.CreateOrthographicOffCenter(0, 1440 / 64f / scale, 900 / 64f / scale, 0, -1, 1);
+        var view = Matrix4.CreateTranslation(1440 / 64f / scale - x, 900 / 64f / scale -y, 0) * Matrix4.CreateOrthographicOffCenter(0, 1440 / 32f / scale, 900 / 32f / scale, 0, -1, 1);
         gl.SolidTexShader.ViewMatrix = view;
         gl.SolidShader.ViewMatrix = view;
 
@@ -313,7 +334,7 @@ public class Program: GameWindow {
         SwapBuffers();
     }
     protected override void OnMouseWheel(MouseWheelEventArgs e) {
-        speed += e.OffsetY / 5f;
+        speed += e.OffsetY / 2f;
         base.OnMouseWheel(e);
     }
 
@@ -327,8 +348,7 @@ public class Program: GameWindow {
             Blending = true,
         };
 
-        atlas.LoadToGL(gl);
-        atlas.Texture!.Interpolation = Interpolation.Nearest;
+        atlas = new EditorAtlas(new Atlas(2048, Path.Join(GetAssetsPath(), "textures"), gl));
         gl.SolidTexShader.Atlas = atlas;
 
         hitbox = gl.Mesh(gl.SolidShader);

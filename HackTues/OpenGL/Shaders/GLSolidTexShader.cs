@@ -42,14 +42,14 @@ void main() {
         SetUniform("texture", 0);
     }
 
-    public Atlas? Atlas { get; set; }
+    public IAtlas? Atlas { get; set; }
     public  string? Texture { get; set; }
 
     public override void Use()
     {
         base.Use();
     
-        if (Texture != null && Atlas != null && Atlas.Texture != null) {
+        if (Texture != null && Atlas != null) {
             var loc = Atlas[Texture];
 
             SetUniform("tex_transform",
@@ -57,7 +57,7 @@ void main() {
                 Matrix4.CreateTranslation(loc.Hitbox.Pos.X, loc.Hitbox.Pos.Y, loc.PageIndex)
             );
 
-            Atlas.Texture.Bind(0);
+            Atlas.Use(0);
         }
     }
     internal override void SetupVAO(int vao, int vbo, int ebo)
