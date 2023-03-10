@@ -8,6 +8,7 @@ public class SideViewPlayer: Player {
     private float kyoteeTime = 0;
     private float jumpCooldown = 0;
 
+    public override Vector2 CameraPos => throw new NotImplementedException();
     protected override Vector2 Friction { get; } = new(0.000001f, 0.1f);
 
     public override void Update(float delta, ICollider environment, IController? controller) {

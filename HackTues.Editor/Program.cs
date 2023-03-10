@@ -16,14 +16,35 @@ public class Program: GameWindow {
         );
     }
 
-    private string assetsPath = Path.GetFullPath("./assets");
+    private static string GetAssetsPath() {
+        if (File.Exists(".assets")) {
+            var r = new StreamReader(".assets");
+            var path = Path.GetFullPath(r.ReadToEnd());
+            r.Close();
+            if (path != null)
+                return path;
+        }
+
+        var w = new StreamWriter(".assets");
+        w.Write("assets");
+        w.Close();
+        return Path.GetFullPath("assets");
+    }
+    private static string SetAssetsPath(string? path = null) {
+        var w = new StreamWriter(".assets");
+        path ??= "assets";
+        w.Write(Path.GetRelativePath(Environment.CurrentDirectory, path));
+        w.Close();
+        return Path.GetFullPath("assets");
+    }
+
     private List<ModifiableHitbox> colliders = new();
     private List<Layer> layers = new();
     private Vector2 spawn;
-    private Atlas atlas = new(2048, "D:/test/assets/textures");
+    private Atlas atlas = new(2048, Path.Join(GetAssetsPath(), "textures"));
     private GLRenderer gl;
     private GLMesh<SolidVertex> hitbox;
-    private float x, y, scale = 1, speed = 4;
+    private float x, y, scale = 1, speed = 1;
 
     private Keys activatorKey = 0;
     private IAction? action = null;
@@ -58,20 +79,19 @@ public class Program: GameWindow {
     private void ChangeAssetsDir() {
         var path = Console.ReadLine();
         if (path == null) return;
-        assetsPath = Path.GetFullPath(path);
-        Directory.CreateDirectory(assetsPath);
-        atlas = new Atlas(2048, Path.Join(assetsPath, "textures"));
+        SetAssetsPath(path);
+        path = GetAssetsPath();
+        Directory.CreateDirectory(path);
+        atlas = new Atlas(2048, Path.Join(path, "textures"));
         gl.SolidTexShader.Atlas = atlas;
     }
     private void SaveMap() {
         Console.Write("Map name: ");
         var path = Console.ReadLine();
         if (path == null) return;
-        path = Path.Join(assetsPath, "maps", path);
+        path = Path.Join(GetAssetsPath(), "maps", path);
 
-        var map = new Map();
-
-        map.Spawn = spawn;
+        var map = new Map { Spawn = spawn };
 
         foreach (var el in layers) {
             map.Layers.Add(el);
@@ -93,7 +113,7 @@ public class Program: GameWindow {
         Console.Write("Map name: ");
         var path = Console.ReadLine();
         if (path == null) return;
-        path = Path.Join(assetsPath, "maps", path);
+        path = Path.Join(GetAssetsPath(), "maps", path);
 
         try {
             Directory.CreateDirectory(Path.GetDirectoryName(path));

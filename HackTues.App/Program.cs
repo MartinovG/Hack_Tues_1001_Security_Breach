@@ -7,16 +7,53 @@ using OpenTK.Windowing.Common;
 using OpenTK.Windowing.Desktop;
 using SkiaSharp;
 
-namespace HackTues.Editor;
+namespace HackTues.App;
 
 public class Program: GameWindow {
+    private static string GetAssetsPath() {
+        if (File.Exists(".assets")) {
+            var r = new StreamReader(".assets");
+            var path = r.ReadToEnd();
+            path = Path.GetFullPath(path);
+            r.Close();
+            if (path != null)
+                return path;
+        }
+
+        var w = new StreamWriter(".assets");
+        w.Write("assets");
+        w.Close();
+        return Path.GetFullPath("assets");
+    }
+    public static Vector2 Round(Vector2 vec) {
+        return new(
+            MathF.Floor(vec.X * 16) / 16,
+            MathF.Floor(vec.Y * 16) / 16
+        );
+    }
+
     private ComputerController controller = new();
     private Game game = new();
-    private TopViewPlayer topPlayer = new(new("player", new(0), new(1), 1f));
+    private TopViewPlayer topPlayer = new(new("player", new(0), new(1, 2), 2f));
     private SideViewPlayer sidePlayer = new(new("player", new(0), new(1), 1f));
-    private Atlas atlas = new(2048, "D:/test/assets/textures");
+    private Atlas atlas = new(2048, Path.Join(GetAssetsPath(), "textures"));
     private GLRenderer gl;
     private GLMesh<SolidVertex> hitbox;
+
+    private void RenderHB(Hitbox hb) {
+        gl.SolidShader.TransformMatrix = Matrix4.CreateScale(hb.Size.X, hb.Size.Y, 1) * Matrix4.CreateTranslation(new(hb.Pos));
+        hitbox.Draw(Primitive.Triangles);
+    }
+    private void LoadMap(string name) {
+        game.Map = Map.Load(new FileStream(Path.Join(GetAssetsPath(), "maps/" + name), FileMode.Open));
+        game.Player = sidePlayer;
+        game.Player!.Position = game.Map.Spawn;
+    }
+    private void LoadSpawn() {
+        game.Map = Map.Load(new FileStream(Path.Join(GetAssetsPath(), "maps/spawn"), FileMode.Open));
+        game.Player = topPlayer;
+        game.Player!.Position = game.Map.Spawn;
+    }
 
     protected override void OnKeyDown(KeyboardKeyEventArgs e) {
         if (e.IsRepeat)
@@ -34,21 +71,17 @@ public class Program: GameWindow {
         game.Update(controller, delta);
         base.OnUpdateFrame(args);
     }
-    private void RenderHB(Hitbox hb) {
-        gl.SolidShader.TransformMatrix = Matrix4.CreateScale(hb.Size.X, hb.Size.Y, 1) * Matrix4.CreateTranslation(new(hb.Pos));
-        hitbox.Draw(Primitive.Triangles);
-    }
     protected override void OnRenderFrame(FrameEventArgs args) {
         gl.NewFrame(Size);
-        gl.SolidTexShader.ViewMatrix = Matrix4.CreateOrthographicOffCenter(0, 1440 / 64, 900 / 64, 0, -1, 1);
-        gl.SolidShader.ViewMatrix = Matrix4.CreateOrthographicOffCenter(0, 1440 / 64, 900 / 64, 0, -1, 1);
+        var view = Matrix4.CreateTranslation(new(Round(new Vector2(1440, 900) / 256) - Round(game.Player!.CameraPos))) * Matrix4.CreateOrthographicOffCenter(0, 1440 / 128, 900 / 128, 0, -1, 1);
+        gl.SolidTexShader.ViewMatrix = view;
+        gl.SolidShader.ViewMatrix = view;
 
         game.Render((float)args.Time);
 
-
-        foreach (var hb in game.Map.Colliders) {
-            RenderHB(hb);
-        }
+        //foreach (var hb in game.Map.Colliders) {
+        //    RenderHB(hb);
+        //}
 
         base.OnRenderFrame(args);
         SwapBuffers();
@@ -68,21 +101,19 @@ public class Program: GameWindow {
         gl.DepthTest = false;
         gl.Blending = true;
 
-        game.Map = new Map();
-        game.Map.Layers.Add(new("test-bg", new(0, 0), new(32, 32), -10));
-        game.Map.Layers.Add(new("fikus", new(2.5f, 2.5f), new(.5f, .5f), .5f));
-        game.Map.Colliders.Add(new(new(2.70f, 2.8f), new(.2f, .2f)));
         game.Player = topPlayer;
 
+        LoadSpawn();
+
         hitbox.Data(new SolidVertex[] {
-        new (new(0, 0), new(1, 0, 0, .5f)),
-        new (new(1, 0), new(1, 0, 0, .5f)),
-        new (new(0, 1), new(1, 0, 0, .5f)),
-        new (new(1, 1), new(1, 0, 0, .5f)),
-    }, new[] {
-        0, 1, 2,
-        1, 2, 3,
-    });
+            new (new(0, 0), new(1, 0, 0, .5f)),
+            new (new(1, 0), new(1, 0, 0, .5f)),
+            new (new(0, 1), new(1, 0, 0, .5f)),
+            new (new(1, 1), new(1, 0, 0, .5f)),
+        }, new[] {
+            0, 1, 2,
+            1, 2, 3,
+        });
 
         Layer.Init(gl);
         base.OnLoad();

@@ -6,9 +6,13 @@ namespace HackTues.Engine;
 
 public abstract class Player: IPlayer {
     protected abstract Vector2 Friction { get; }
+    public abstract Vector2 CameraPos { get; }
     public Layer Layer { get; set; }
     public Hitbox Hitbox { get; set; } = new Hitbox(new(0, .01f), new(1, 1.99f));
-    public Vector2 Position => pos;
+    public Vector2 Position {
+        get => pos;
+        set => pos = value;
+    }
     public Vector2 Velocity => vel;
 
     protected Vector2 pos, vel;

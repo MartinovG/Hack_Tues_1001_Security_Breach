@@ -29,11 +29,11 @@ public class Map: ICollider, ILayerOwner {
     public Map() { }
 
     private static void SaveLayer(BinaryWriter w, Layer layer) {
-        w.Write(MathF.Floor(layer.Position.X * 16));
-        w.Write(MathF.Floor(layer.Position.Y * 16));
-        w.Write(MathF.Floor(layer.Size.X * 16));
-        w.Write(MathF.Floor(layer.Size.Y * 16));
-        w.Write(MathF.Floor(layer.YOffset * 16));
+        w.Write((int)MathF.Floor(layer.Position.X * 16));
+        w.Write((int)MathF.Floor(layer.Position.Y * 16));
+        w.Write((int)MathF.Floor(layer.Size.X * 16));
+        w.Write((int)MathF.Floor(layer.Size.Y * 16));
+        w.Write((int)MathF.Floor(layer.YOffset * 16));
         w.Write(layer.Texture);
     }
     private static Layer LoadLayer(BinaryReader r) {
@@ -54,8 +54,8 @@ public class Map: ICollider, ILayerOwner {
     public static void Save(Map map, Stream stream) {
         var w = new BinaryWriter(stream);
 
-        w.Write(MathF.Floor(map.Spawn.X * 16));
-        w.Write(MathF.Floor(map.Spawn.Y * 16));
+        w.Write((int)MathF.Floor(map.Spawn.X * 16));
+        w.Write((int)MathF.Floor(map.Spawn.Y * 16));
         w.Write(map.Layers.Count);
         foreach (var bg in map.Layers) {
             SaveLayer(w, bg);
@@ -63,10 +63,10 @@ public class Map: ICollider, ILayerOwner {
 
         w.Write(map.Colliders.Count);
         foreach (var hb in map.Colliders) {
-            w.Write(MathF.Floor(hb.Pos.X * 16));
-            w.Write(MathF.Floor(hb.Pos.Y * 16));
-            w.Write(MathF.Floor(hb.Size.X * 16));
-            w.Write(MathF.Floor(hb.Size.Y * 16));
+            w.Write((int)MathF.Floor(hb.Pos.X * 16));
+            w.Write((int)MathF.Floor(hb.Pos.Y * 16));
+            w.Write((int)MathF.Floor(hb.Size.X * 16));
+            w.Write((int)MathF.Floor(hb.Size.Y * 16));
         }
     }
     public static Map Load(Stream stream) {
