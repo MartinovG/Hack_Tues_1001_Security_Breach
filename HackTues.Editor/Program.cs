@@ -30,18 +30,17 @@ public class EditorAtlas: IAtlas {
 public class Program: GameWindow {
     public static Vector2 Round(Vector2 vec) {
         return new(
-            MathF.Floor(vec.X * 16) / 16,
-            MathF.Floor(vec.Y * 16) / 16
+            MathF.Floor(vec.X),
+            MathF.Floor(vec.Y)
         );
     }
 
     private static string GetAssetsPath() {
         if (File.Exists(".assets")) {
             var r = new StreamReader(".assets");
-            var path = Path.GetFullPath(r.ReadToEnd());
+            var path = r.ReadToEnd().Trim();
             r.Close();
-            if (path != null)
-                return path;
+            if (path != "") return Path.GetFullPath(path);
         }
 
         var w = new StreamWriter(".assets");
@@ -63,7 +62,7 @@ public class Program: GameWindow {
     private IAtlas atlas;
     private GLRenderer gl;
     private GLMesh<SolidVertex> hitbox;
-    private float x, y, scale = 1, speed = 1;
+    private float x = 1440 / 4, y = 900 / 4, scale = 1, speed = 6;
 
     private Keys activatorKey = 0;
     private IAction? action = null;
@@ -160,7 +159,7 @@ public class Program: GameWindow {
             Console.WriteLine("Texture doesn't exist.");
         }
         else {
-            layers.Add(new(path, Round(new(x, y)), tex.Hitbox.Size * atlas.Size / 16f));
+            layers.Add(new(path, Round(new(x, y)), tex.Hitbox.Size * atlas.Size));
         }
     }
     private void AddHitbox() {
@@ -170,12 +169,14 @@ public class Program: GameWindow {
     private void RenderHorizontalLine(Vector2 pos, float width, Vector4? color = null, float thickness = 1) {
         RenderHB(new(pos, new(width, thickness)), color);
     }
+    private void RenderVerticalLine(Vector2 pos, float height, Vector4? color = null, float thickness = 1) {
+        RenderHB(new(pos, new(thickness, height)), color);
+    }
     private void RenderOutline(Hitbox hb, Vector4? color = null, float thickness = 1) {
         RenderHB(new(new(hb.Pos1.X - thickness, hb.Pos1.Y - thickness), new(thickness, hb.Size.Y + thickness)), color);
         RenderHB(new(new(hb.Pos2.X, hb.Pos1.Y), new(thickness, hb.Size.Y + thickness)), color);
         RenderHB(new(new(hb.Pos1.X, hb.Pos1.Y - thickness), new(hb.Size.X + thickness, thickness)), color);
         RenderHB(new(new(hb.Pos1.X - thickness, hb.Pos2.Y), new(hb.Size.X + thickness, thickness)), color);
-        //RenderHB(new(new(hb.Pos1.X, hb.Pos2.Y - thickness), new(hb.Size.X, thickness)), color);
     }
     private void RenderHB(Hitbox hb, Vector4? color = null) {
         color ??= new(1, 0, 0, 0.5f);
@@ -194,14 +195,9 @@ public class Program: GameWindow {
     }
 
     private void RenderCrosshair() {
-        gl.SolidTexShader.ViewMatrix = Matrix4.CreateOrthographicOffCenter(0, 1440, 900, 0, -1, 1);
-
-        gl.SolidTexShader.Texture = "crosshair";
-        gl.SolidTexShader.TransformMatrix =
-            Matrix4.CreateTranslation(-.5f, -.5f, 0) *
-            Matrix4.CreateScale(10, 10, 1) *
-            Matrix4.CreateTranslation(1440 / 2, 900 / 2, 0);
-        Layer.mesh!.Draw();
+        gl.SolidShader.ViewMatrix = Matrix4.CreateOrthographicOffCenter(0, 1440 / 1, 900 / 1, 0, -1, 1);
+        RenderHorizontalLine(new(1440 / 2 - 10, 900 / 2 - 1), 20, new(0, 0, 0, 1), 2);
+        RenderVerticalLine(new(1440 / 2 - 1, 900 / 2 - 10), 20, new(0, 0, 0, 1), 2);
     }
     private void RenderLayers() {
         foreach (var layer in layers) {
@@ -211,27 +207,30 @@ public class Program: GameWindow {
     private void RenderLayerOutlines() {
         foreach (var el in layers) {
             if (selection == el) {
-                RenderOutline(new(el.Position - el.Origin, el.Size), new(1, 0, 1, 1), 1 / 32f);
-                RenderHorizontalLine(el.Position, 1 / 16f, new(1, 0, 0, 1), 1 / 16f);
+                RenderOutline(new(el.Position - el.Origin, el.Size), new(1, 0, 1, 1), .5f);
+                RenderHorizontalLine(el.Position, 1, new(1, 0, 0, 1), 1);
             }
             else {
-                RenderOutline(new(el.Position - el.Origin, el.Size), new(1, 0, 0, 1), 1 / 32f);
-                RenderHorizontalLine(el.Position, 1 / 16f, new(1, 0, 0, 1), 1 / 16f);
+                RenderOutline(new(el.Position - el.Origin, el.Size), new(1, 0, 0, 1), .5f);
+                RenderHorizontalLine(el.Position, 1, new(1, 0, 0, 1), 1);
             }
         }
     }
     private void RenderColliders() {
         foreach (var el in colliders) {
             if (selection == el) {
-                RenderOutline(el.Value, new(0, 1, 1, 1), 1 / 32f);
+                RenderOutline(el.Value, new(0, 1, 1, 1), .5f);
             }
             else {
-                RenderOutline(el.Value, new(0, 1, 0, 1), 1 / 32f);
+                RenderOutline(el.Value, new(0, 1, 0, 1), .5f);
             }
         }
     }
     private void RenderSpawn() {
-        RenderHorizontalLine(spawn, 1 / 16f, new Vector4(1, .5f, 0, 1), 1 / 16f);
+        RenderHorizontalLine(spawn, 1, new Vector4(1, .5f, 0, 1), 1);
+    }
+    private void RenderScreenGuide() {
+        RenderOutline(new(new(0, 0), new(1440 / 2, 900 / 2)), new(0, 0, 0, 1), .5f);
     }
 
     protected override void OnKeyDown(KeyboardKeyEventArgs e) {
@@ -318,7 +317,9 @@ public class Program: GameWindow {
     }
     protected override void OnRenderFrame(FrameEventArgs args) {
         gl.NewFrame(Size);
-        var view = Matrix4.CreateTranslation(1440 / 64f / scale - x, 900 / 64f / scale -y, 0) * Matrix4.CreateOrthographicOffCenter(0, 1440 / 32f / scale, 900 / 32f / scale, 0, -1, 1);
+        var view =
+            Matrix4.CreateTranslation(1440 / 4f / scale - x, 900 / 4f / scale - y, 0) *
+            Matrix4.CreateOrthographicOffCenter(0, 1440 / 2f / scale, 900 / 2f / scale, 0, -1, 1);
         gl.SolidTexShader.ViewMatrix = view;
         gl.SolidShader.ViewMatrix = view;
 
@@ -328,6 +329,7 @@ public class Program: GameWindow {
         RenderLayerOutlines();
         RenderColliders();
         RenderSpawn();
+        RenderScreenGuide();
         RenderCrosshair();
 
         base.OnRenderFrame(args);

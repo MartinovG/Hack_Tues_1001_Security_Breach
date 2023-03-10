@@ -13,15 +13,15 @@ namespace HackTues.App;
 public class Program: GameWindow {
     public static Vector2 Round(Vector2 vec) {
         return new(
-            MathF.Floor(vec.X * 16) / 16,
-            MathF.Floor(vec.Y * 16) / 16
+            MathF.Floor(vec.X),
+            MathF.Floor(vec.Y)
         );
     }
 
     private ComputerController controller = new();
     private Game game = new(
-        new(new("player", new(0), new(1, 2), new(.5f, 2f))),
-        new(new("player", new(0), new(1, 2), new(.5f, 2f)))
+        new("player"),
+        new("player")
     );
     private IAtlas atlas;
     private GLRenderer gl;
@@ -51,12 +51,12 @@ public class Program: GameWindow {
     protected override void OnRenderFrame(FrameEventArgs args) {
         gl.NewFrame(Size);
         var view =
-            Matrix4.CreateTranslation(new(Round(new Vector2(1440, 900) / 128) - Round(game.Player!.CameraPos))) *
-            Matrix4.CreateOrthographicOffCenter(0, 1440 / 64, 900 / 64, 0, -1, 1);
+            Matrix4.CreateTranslation(new(Round(new Vector2(1440, 900) / 4) - Round(game.Player!.CameraPos))) *
+            Matrix4.CreateOrthographicOffCenter(0, 1440 / 2, 900 / 2, 0, -1, 1);
         gl.SolidTexShader.ViewMatrix = view;
         gl.SolidShader.ViewMatrix = view;
 
-        game.Render((float)args.Time);
+        game.Render();
 
         base.OnRenderFrame(args);
         SwapBuffers();

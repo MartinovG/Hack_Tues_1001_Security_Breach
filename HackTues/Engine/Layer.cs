@@ -15,7 +15,7 @@ public class Layer: IComparable<Layer> {
     public string Texture { get; }
 
     public void Render() {
-        var pos = new Vector2((int)(Position.X * 16) / 16f, (int)(Position.Y * 16) / 16f);
+        var pos = new Vector2(MathF.Floor(Position.X), MathF.Floor(Position.Y));
         if (shader == null || mesh == null) {
             throw new InvalidOperationException("A layer may not be rendered, before Layer.Init has been called.");
         }
@@ -29,7 +29,7 @@ public class Layer: IComparable<Layer> {
 
     public int CompareTo(Layer? other) {
         if (other is null) throw new ArgumentNullException(nameof(other));
-            return (this.Position.Y).CompareTo(other.Position.Y);
+            return this.Position.Y.CompareTo(other.Position.Y);
     }
 
     public Layer(string texture, Vector2 pos, Vector2 size, Vector2? origin = null) {

@@ -4,10 +4,12 @@ using OpenTK.Mathematics;
 
 namespace HackTues.Engine;
 
-public interface IPlayer: ILayerOwner {
-    public Hitbox Hitbox { get; set; }
-    public Vector2 Position { get; set; }
+public interface IGame: ILayerOwner {
+    public Vector2 PlayerPosition { get; set; }
     public Vector2 CameraPos { get; }
+    public Map Map { get; }
+    public bool Switch { get; }
 
-    public void Update(float delta, ICollider environment, IController? controller);
+    public void LoadMap(string name);
+    public void Update(float delta, IController? controller);
 }
