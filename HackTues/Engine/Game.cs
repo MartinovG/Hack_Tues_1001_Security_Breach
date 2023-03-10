@@ -1,7 +1,5 @@
 ﻿using HackTues.Controls;
 using OpenTK.Mathematics;
-using System;
-using System.IO;
 
 namespace HackTues.Engine;
 
@@ -60,7 +58,7 @@ public abstract class Game: IGame {
             fg.Render();
         }
     }
-    public virtual void Update(float delta, IController? controller) {
+    public virtual Vector2 Update(float delta, IController? controller) {
         var acc = GetAcceleration(delta, controller);
 
         vel += acc * delta;
@@ -79,13 +77,58 @@ public abstract class Game: IGame {
             vel.Y = 0;
             HitY();
         }
+
+        return acc;
     }
 }
 
+public enum Direction {
+    North,
+    South,
+    West,
+    East,
+}
+
 public class LobbyGame: Game {
+    private Direction direction = Direction.North;
+    private float walkCycle = 0;
+    private Layer[] east = {
+        new("player-office-east-0", new(0, 0), new(34, 84), new(17, 75)),
+        new("player-office-east-1", new(0, 0), new(34, 81), new(17, 75)),
+        new("player-office-east-2", new(0, 0), new(34, 78), new(17, 75)),
+    };
+    private Layer[] west = {
+        new("player-office-west-0", new(0, 0), new(34, 84), new(17, 75)),
+        new("player-office-west-1", new(0, 0), new(34, 81), new(17, 75)),
+        new("player-office-west-2", new(0, 0), new(34, 78), new(17, 75)),
+    };
+    private Layer[] north = {
+        new("player-office-north-0", new(0, 0), new(45, 83), new(23, 77)),
+        new("player-office-north-1", new(0, 0), new(39, 83), new(20, 77)),
+        new("player-office-north-2", new(0, 0), new(40, 83), new(20, 77)),
+    };
+    private Layer[] south = {
+        new("player-office-south-0", new(0, 0), new(45, 83), new(23, 77)),
+        new("player-office-south-1", new(0, 0), new(39, 83), new(20, 77)),
+        new("player-office-south-2", new(0, 0), new(40, 83), new(20, 77)),
+    };
     protected override Vector2 Friction { get; } = new(0.000001f, 0.000001f);
-    public override Layer PlayerLayer { get; } = new("player", new(0, 0), new(32, 64), new(16, 64));
-    public override Hitbox PlayerHitbox { get; } = new(new(-16, -8), new(32, 8));
+    public override Layer PlayerLayer {
+        get {
+            int i = (int)walkCycle % 4;
+            if (i == 2) i = 0;
+            if (i == 3) i = 2;
+
+            switch (direction) {
+                case Direction.North: return north[i];
+                case Direction.South: return south[i];
+                case Direction.West: return west[i];
+                case Direction.East: return east[i];
+                default: return null!;
+            }
+        }
+    }
+    public override Hitbox PlayerHitbox { get; } = new(new(-12, -5), new(24, 10));
     public override Vector2 CameraPos => PlayerPosition;
     public ILevelLoader LevelLoader { get; }
 
@@ -96,15 +139,19 @@ public class LobbyGame: Game {
 
         if (controller.Get(Button.Left)) {
             acc -= Vector2.UnitX;
+            direction = Direction.West;
         }
         if (controller.Get(Button.Right)) {
             acc += Vector2.UnitX;
+            direction = Direction.East;
         }
         if (controller.Get(Button.Up)) {
             acc -= Vector2.UnitY;
+            direction = Direction.North;
         }
         if (controller.Get(Button.Down)) {
             acc += Vector2.UnitY;
+            direction = Direction.South;
         }
 
         if (acc.Length > 1)
@@ -114,8 +161,15 @@ public class LobbyGame: Game {
         return acc;
     }
 
-    public override void Update(float delta, IController? controller) {
-        base.Update(delta, controller);
+    public override Vector2 Update(float delta, IController? controller) {
+        var acc = base.Update(delta, controller);
+
+        if (acc.Length > 1) {
+            walkCycle += delta * 4;
+        }
+        else {
+            walkCycle = 0;
+        }
 
         if (controller?.Poll(Button.Shoot) == true) {
             foreach (var entry in Map.EntryLayers) {
@@ -124,6 +178,8 @@ public class LobbyGame: Game {
                 }
             }
         }
+
+        return acc;
     }
 
     public LobbyGame(ILevelLoader lobbyLoader) {
@@ -170,11 +226,13 @@ public class LevelGame: Game {
         return acc;
     }
 
-    public override void Update(float delta, IController? controller) {
-        base.Update(delta, controller);
+    public override Vector2 Update(float delta, IController? controller) {
+        var res = base.Update(delta, controller);
 
         jumpCooldown -= delta;
         kyoteeTime -= delta;
+
+        return res;
     }
 
     public LevelGame(ILevelLoader levelLoader) {

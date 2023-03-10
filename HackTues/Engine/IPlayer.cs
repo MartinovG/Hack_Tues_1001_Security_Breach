@@ -10,5 +10,5 @@ public interface IGame: ILayerOwner {
     public Map Map { get; }
     public bool Switch { get; }
 
-    public void Update(float delta, IController? controller);
+    public Vector2 Update(float delta, IController? controller);
 }
