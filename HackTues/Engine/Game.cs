@@ -169,6 +169,7 @@ public class LevelPlayer: DynamicCollider {
     private float walkCycle = 0;
     private float kyoteeTime = 0;
     private float jumpCooldown = 0;
+    private float block = 0;
     private TurnDirection turn = TurnDirection.Right;
     private WeaponDirection weapon = WeaponDirection.Middle;
     private LevelGame game;
@@ -210,34 +211,37 @@ public class LevelPlayer: DynamicCollider {
     }
     public override void Update(float delta, IController controller) {
         var acc = Vector2.Zero;
+        block += delta / 5;
 
-        if (controller.Get(Button.Left)) {
-            acc -= Vector2.UnitX * 1250;
-            turn = TurnDirection.Left;
-        }
-        if (controller.Get(Button.Right)) {
-            acc += Vector2.UnitX * 1250;
-            turn = TurnDirection.Right;
-        }
-        if (controller.Get(Button.Up) && kyoteeTime > 0 && jumpCooldown < 0 && controller.Poll(Button.Up)) {
-            Velocity = new(Velocity.X, -500);
-            kyoteeTime = 0;
-            jumpCooldown = .5f;
-        }
+        if ((int)block % 2 == 0) {
+            if (controller.Get(Button.Left)) {
+                acc -= Vector2.UnitX * 1500;
+                turn = TurnDirection.Left;
+            }
+            if (controller.Get(Button.Right)) {
+                acc += Vector2.UnitX * 1500;
+                turn = TurnDirection.Right;
+            }
+            if (controller.Get(Button.Up) && kyoteeTime > 0 && jumpCooldown < 0 && controller.Poll(Button.Up)) {
+                Velocity = new(Velocity.X, -700);
+                kyoteeTime = 0;
+                jumpCooldown = .5f;
+            }
 
-        if (controller.Get(Button.WeaponLeft)) {
-            turn = TurnDirection.Left;
-            weapon = WeaponDirection.Middle;
-        }
-        if (controller.Get(Button.WeaponRight)) {
-            turn = TurnDirection.Right;
-            weapon = WeaponDirection.Middle;
-        }
-        if (controller.Get(Button.WeaponUp)) {
-            weapon = WeaponDirection.Up;
-        }
-        if (controller.Get(Button.WeaponDown)) {
-            weapon = WeaponDirection.Down;
+            if (controller.Get(Button.WeaponLeft)) {
+                turn = TurnDirection.Left;
+                weapon = WeaponDirection.Middle;
+            }
+            if (controller.Get(Button.WeaponRight)) {
+                turn = TurnDirection.Right;
+                weapon = WeaponDirection.Middle;
+            }
+            if (controller.Get(Button.WeaponUp)) {
+                weapon = WeaponDirection.Up;
+            }
+            if (controller.Get(Button.WeaponDown)) {
+                weapon = WeaponDirection.Down;
+            }
         }
 
         Velocity += acc * delta;
