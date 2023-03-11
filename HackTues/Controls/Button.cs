@@ -9,5 +9,10 @@ public enum Button {
     Left,
     Right,
 
+    WeaponUp,
+    WeaponDown,
+    WeaponLeft,
+    WeaponRight,
+
     Shoot,
 }

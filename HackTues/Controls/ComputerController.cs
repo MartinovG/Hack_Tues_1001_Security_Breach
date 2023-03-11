@@ -20,6 +20,10 @@ public class ComputerController: IController {
 
     public void Update(Keys key, bool down) {
         var btn = key switch {
+            Keys.Up => Button.WeaponUp,
+            Keys.Down => Button.WeaponDown,
+            Keys.Left => Button.WeaponLeft,
+            Keys.Right => Button.WeaponRight,
             Keys.W => Button.Up,
             Keys.S => Button.Down,
             Keys.A => Button.Left,
